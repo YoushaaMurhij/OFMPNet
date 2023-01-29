@@ -14,9 +14,9 @@ RUN python3 -m pip install pip --upgrade
 RUN python3 -m pip install numpy matplotlib tqdm 
 RUN pip3 install waymo-open-dataset-tf-2-6-0 
 RUN pip3 install tensorflow-addons
-RUN pip install keras==2.6
-
+# RUN pip install keras==2.6
 RUN pip3 install wandb
+RUN pip3 install torch torchvision --extra-index-url https://download.pytorch.org/whl/cu113
 
 ARG USER=user
 ARG UID=1000
@@ -27,6 +27,6 @@ ARG PW=user
 RUN useradd -m ${USER} --uid=${UID} && echo "${USER}:${PW}" | chpasswd && adduser ${USER} sudo
 
 WORKDIR /home/${USER}
-RUN cd /home/${USER} && mkdir -p ofpnet && chown -R ${UID}:${GID} ./
+RUN cd /home/${USER} && mkdir -p ofmpnet && chown -R ${UID}:${GID} ./
 
 USER ${UID}:${GID}
