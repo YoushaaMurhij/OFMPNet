@@ -25,38 +25,22 @@ import zlib
 
 #configuration
 config = occupancy_flow_metrics_pb2.OccupancyFlowTaskConfig()
-config_text = """
-num_past_steps: 10
-num_future_steps: 80
-num_waypoints: 8
-cumulative_waypoints: false
-normalize_sdc_yaw: true
-grid_height_cells: 256
-grid_width_cells: 256
-sdc_y_in_grid: 192
-sdc_x_in_grid: 128
-pixels_per_meter: 3.2
-agent_points_per_side_length: 48
-agent_points_per_side_width: 16
-"""
-text_format.Parse(config_text, config)
+with open('configs/waymo_ofp.config', 'r') as f:
+    config_text = f.read()
+    text_format.Parse(config_text, config)
 
 print(config)
+
 # Hyper parameters
 NUM_PRED_CHANNELS = 4
-
-
 TEST =True
 
 def parse_record_test(features):
 
     features['centerlines'] = features['centerlines'].to(torch.float32)
-
     features['actors'] = features['actors'].to(torch.float32)
     features['occl_actors'] = features['occl_actors'].to(torch.float32)
-
     features['ogm'] = features['ogm'].to(torch.float32)
-
     features['map_image'] = (features['map_image'].to(torch.float32) / 256)
     features['vec_flow'] = features['vec_flow']
     features['scenario/id'] = features['scenario/id']
@@ -258,10 +242,10 @@ def id_checking(test=True):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='Inference')
-    parser.add_argument('--ids_dir', type=str, help='ids.txt downloads from Waymos', default="/datasets/waymo110/occupancy_flow_challenge")
-    parser.add_argument('--save_dir', type=str, help='saving directory',default="/casademo/inference/torch")
-    parser.add_argument('--file_dir', type=str, help='Test Dataset directory',default="/datasets/waymo110/preprocessed_data/test_numpy")
-    parser.add_argument('--weight_path', type=str, help='Model weights directory',default="/casademo/weights/torch/model_1.pt")
+    parser.add_argument('--ids_dir', type=str, help='ids.txt downloads from Waymos', default="./Waymo_Dataset/occupancy_flow_challenge")
+    parser.add_argument('--save_dir', type=str, help='saving directory',default="./Waymo_Dataset/inference/torch")
+    parser.add_argument('--file_dir', type=str, help='Test Dataset directory',default="./Waymo_Dataset/preprocessed_data/test_numpy")
+    parser.add_argument('--weight_path', type=str, help='Model weights directory',default="./experiments/model_1.pt")
     args = parser.parse_args()
 
     checkpoint = torch.load(args.weight_path, map_location=device)

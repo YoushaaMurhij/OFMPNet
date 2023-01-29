@@ -190,7 +190,6 @@ def model_training(gpu_id, world_size):
     model, loss_fn, optimizer, scheduler = setup(gpu_id)
     train_loader, val_loader = get_dataloader(gpu_id, world_size)
 
-
     # set up wandb
     if args.wandb:
         import wandb
@@ -367,13 +366,13 @@ def model_training(gpu_id, world_size):
                 'optimizer_state_dict': optimizer.state_dict(),
                 'scheduler_state_dict': scheduler.state_dict(),
                 'loss': loss_value,
-            }, f'{SAVE_DIR}/model_{epoch+1}.pt')
+            }, f'{SAVE_DIR}/epoch_{epoch+1}.pt')
     
     destroy_process_group()
 
     if args.wandb:
         wandb.finish()
-    print('Finished Training. Model Saved!')
+    print(f'Finished training. Model saved in {args.save_dir}!')
 
 parser = argparse.ArgumentParser(description='OFMPNet Training')
 parser.add_argument('--save_dir', type=str,
@@ -393,7 +392,7 @@ args = parser.parse_args()
 
 
 # Parameters
-SAVE_DIR = args.save_dir
+SAVE_DIR = args.save_dir + f"/{args.title}"
 FILES_DIR = args.file_dir
 CHECKPOINT_PATH = args.model_path
 
