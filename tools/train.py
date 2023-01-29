@@ -191,6 +191,15 @@ def model_training(gpu_id, world_size):
     train_loader, val_loader = get_dataloader(gpu_id, world_size)
 
 
+    # set up wandb
+    if args.wandb:
+        import wandb
+        with open('wandb_api_key.txt') as f:
+            os.environ["WANDB_API_KEY"] = f.read()
+        os.environ["WANDB_MODE"] = 'online' # offline, online, disabled, dryrun, sync
+        wandb.init(project="ofpnet", entity="youshaamurhij", name=args.title)
+        wandb.config.update(args)
+        
     if CHECKPOINT_PATH is not None:
         # if checkpoint path given, load weights
         map_location = {'cuda:%d' % 0: 'cuda:%d' % gpu_id}
@@ -273,8 +282,8 @@ def model_training(gpu_id, world_size):
                 batch_size = data['ogm'].size(dim=0)
                 current = (batch * BATCH_SIZE + batch_size) * world_size
                 print(f"\nobs. loss: {obs_loss:>7f}, occl. loss:  {occ_loss:>7f}, flow loss: {flow_loss:>7f}, warp loss: {warp_loss:>7f}  [{current:>5d}/{size:>5d}]", flush=True)
-                if args.wandb:
-                    wandb.log({'train/obs_loss': obs_loss, 'train/occ_loss': occ_loss, 'train/flow_loss': flow_loss, 'train/warp_loss': warp_loss})
+            if args.wandb:
+                wandb.log({'train/obs_loss': obs_loss, 'train/occ_loss': occ_loss, 'train/flow_loss': flow_loss, 'train/warp_loss': warp_loss})
         
 
         scheduler.step()
@@ -340,8 +349,8 @@ def model_training(gpu_id, world_size):
                     batch_size = data['ogm'].size(dim=0)
                     current = (batch * BATCH_SIZE + batch_size) * world_size
                     print(f"\nobs. loss: {obs_loss:>7f}, occl. loss:  {occ_loss:>7f}, flow loss: {flow_loss:>7f}, warp loss: {warp_loss:>7f}  [{current:>5d}/{size:>5d}]", flush=True)
-                    if args.wandb:
-                        wandb.log({'val/obs_loss': obs_loss, 'val/occ_loss': occ_loss, 'val/flow_loss': flow_loss, 'val/warp_loss': warp_loss})
+                if args.wandb:
+                    wandb.log({'val/obs_loss': obs_loss, 'val/occ_loss': occ_loss, 'val/flow_loss': flow_loss, 'val/warp_loss': warp_loss})
 
         val_res_dict = valid_metrics.compute()
         
@@ -397,14 +406,7 @@ LR = args.lr
 os.path.exists(SAVE_DIR) or os.makedirs(SAVE_DIR)
 
 if __name__ == "__main__":
-    # set up wandb
-    if args.wandb:
-        import wandb
-        with open('wandb_api_key.txt') as f:
-            os.environ["WANDB_API_KEY"] = f.read()
-        os.environ["WANDB_MODE"] = 'online' # offline, online, disabled, dryrun, sync
-        wandb.init(project="ofpnet", entity="youshaamurhij", name=args.title)
-        wandb.config.update(args)
+
 
     world_size = torch.cuda.device_count()
     mp.spawn(model_training, args=[world_size], nprocs=world_size)
