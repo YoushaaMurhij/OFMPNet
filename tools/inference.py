@@ -14,7 +14,7 @@ import core.utils.occupancy_flow_grids as occupancy_flow_grids
 
 from google.protobuf import text_format
 
-from core.datasets.filesDataset import FilesDataset
+from core.datasets.WODataset import WODataset
 
 import glob
 
@@ -227,7 +227,7 @@ def _save_submission_to_file(
 def _make_test_loader(test_path: str, shard: str) -> torch.utils.data.Dataset:
     """Makes a dataloader for one shard in the test set."""
     shard_files = glob.glob(test_path + f'/{shard}*.npz')
-    test_dataset = FilesDataset(
+    test_dataset = WODataset(
         files=shard_files, 
         transform=parse_record_test
     )

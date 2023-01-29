@@ -4,7 +4,7 @@ import os
 import numpy as np
 import glob
 
-class FilesDataset(Dataset):
+class WODataset(Dataset):
     def __init__(self, files = None, path = None, transform = None):
         if files is not None:
             self.files = files

@@ -16,8 +16,8 @@ from tqdm import tqdm
 from PIL import Image as Image
 from time import time as time
 
-from data_utils import road_label,road_line_map,light_label,light_state_map
-from grid_utils import create_all_grids,rotate_all_from_inputs,add_sdc_fields
+from core.utils.data_utils import road_label,road_line_map,light_label,light_state_map
+from core.utils.grid_utils import create_all_grids,rotate_all_from_inputs,add_sdc_fields
 import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib as mpl
@@ -476,9 +476,9 @@ if __name__=="__main__":
     from glob import glob
 
     parser = argparse.ArgumentParser(description='Data-preprocessing')
-    parser.add_argument('--ids_dir', type=str, help='ids.txt downloads from Waymos', default="/datasets/waymo110/occupancy_flow_challenge")
-    parser.add_argument('--save_dir', type=str, help='saving directory',default="/datasets/waymo110/preprocessed_data")
-    parser.add_argument('--file_dir', type=str, help='Dataset directory',default="/datasets/waymo110/tf_example")
+    parser.add_argument('--ids_dir', type=str, help='ids.txt downloads from Waymos', default="./Waymo_Dataset/occupancy_flow_challenge")
+    parser.add_argument('--save_dir', type=str, help='saving directory',default="./Waymo_Dataset/preprocessed_data")
+    parser.add_argument('--file_dir', type=str, help='Dataset directory',default="./Waymo_Dataset/tf_example")
     parser.add_argument('--pool', type=int, help='num of pooling multi-processes in preprocessing',default=1)
     args = parser.parse_args()
 
@@ -488,16 +488,16 @@ if __name__=="__main__":
     print(f'Processing training data...{len(train_files)} found!')
     print('Starting processing pooling...')
     with Pool(NUM_POOLS) as p:
-        p.map(process_training_data, train_files)
+        p.map(process_training_data, train_files[:1])
     
     val_files = glob(f'{args.file_dir}/validation/*')
     print(f'Processing validation data...{len(val_files)} found!')
     print('Starting processing pooling...')
     with Pool(NUM_POOLS) as p:
-        p.map(process_val_data, val_files)
+        p.map(process_val_data, val_files[:1])
     
     test_files = glob(f'{args.file_dir}/testing/*')
     print(f'Processing validation data...{len(test_files)} found!')
     print('Starting processing pooling...')
     with Pool(NUM_POOLS) as p:
-        p.map(process_test_data, test_files)
+        p.map(process_test_data, test_files[:1])

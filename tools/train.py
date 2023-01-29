@@ -5,6 +5,7 @@ import torch.nn as nn
 import math
 import copy
 import numpy as np
+import argparse
 from waymo_open_dataset.protos import occupancy_flow_metrics_pb2
 from google.protobuf import text_format
 import core.utils.occupancy_flow_grids as occupancy_flow_grids
@@ -15,46 +16,19 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.distributed import init_process_group, destroy_process_group
 
 from core.losses.loss import OGMFlow_loss
-
 from core.models.OFMPNet import OFMPNet
 
 from torchmetrics import MeanMetric
 import core.utils.occu_metric as occupancy_flow_metrics
 from core.utils.metrics import OGMFlowMetrics, print_metrics
+from core.datasets.WODataset import WODataset
 
-from core.datasets.filesDataset import FilesDataset
-
-from time import time
 from tqdm import tqdm
-import sys
 
 config = occupancy_flow_metrics_pb2.OccupancyFlowTaskConfig()
-config_text = """
-num_past_steps: 10
-num_future_steps: 80
-num_waypoints: 8
-cumulative_waypoints: false
-normalize_sdc_yaw: true
-grid_height_cells: 256
-grid_width_cells: 256
-sdc_y_in_grid: 192
-sdc_x_in_grid: 128
-pixels_per_meter: 3.2
-agent_points_per_side_length: 48
-agent_points_per_side_width: 16
-"""
-text_format.Parse(config_text, config)
-
-# Parameters
-SAVE_DIR = "./weights"
-FILES_DIR = "./preprocessed_data"
-CHECKPOINT_PATH = None
-
-# Hyper parameters
-NUM_PRED_CHANNELS = 4
-BATCH_SIZE = 8
-EPOCHS = 15
-LR = 1e-4
+with open('configs/waymo_ofp.config', 'r') as f:
+    config_text = f.read()
+    text_format.Parse(config_text, config)
 
 # loss weights
 ogm_weight = 1000.0
@@ -176,7 +150,7 @@ def get_dataloader(gpu_id, world_size):
     Get training and validation dataloaders
     """
 
-    dataset = FilesDataset(
+    dataset = WODataset(
         path=FILES_DIR + '/train_numpy', 
         transform=parse_record
     )
@@ -190,7 +164,7 @@ def get_dataloader(gpu_id, world_size):
         sampler=DistributedSampler(dataset)
     )
 
-    val_dataset = FilesDataset(
+    val_dataset = WODataset(
         path=FILES_DIR + '/val_numpy',
         transform=parse_record
     )
@@ -385,8 +359,44 @@ def model_training(gpu_id, world_size):
     
     destroy_process_group()
 
+parser = argparse.ArgumentParser(description='OFMPNet Training')
+parser.add_argument('--save_dir', type=str,
+                    help='saving directory', default="./experiments")
+parser.add_argument('--file_dir', type=str, help='Training Val Dataset directory',
+                    default="./Waymo_Dataset/preprocessed_data")
+parser.add_argument('--model_path', type=str,
+                    help='loaded weight path', default=None)
+parser.add_argument('--batch_size', type=int, help='batch_size', default=2)
+parser.add_argument('--epochs', type=int, help='training eps', default=15)
+parser.add_argument('--lr', type=float,
+                    help='initial learning rate', default=1e-4)
+parser.add_argument('--wandb', type=bool, help='wandb logging', default=False)
+parser.add_argument(
+    '--title', help='choose a title for your wandb/log process', default="ofmpnet")
+args = parser.parse_args()
+
+
+# Parameters
+SAVE_DIR = args.save_dir
+FILES_DIR = args.file_dir
+CHECKPOINT_PATH = args.model_path
+
+# Hyper parameters
+NUM_PRED_CHANNELS = 4
+BATCH_SIZE = args.batch_size
+EPOCHS = args.epochs
+LR = args.lr
+
+
 if __name__ == "__main__":
+    # set up wandb
+    if args.wandb:
+        import wandb
+        with open('wandb_api_key.txt') as f:
+            os.environ["WANDB_API_KEY"] = f.read()
+        os.environ["WANDB_MODE"] = 'online' # offline, online, disabled, dryrun, sync
+        wandb.init(project="ofpnet", entity="youshaamurhij", name=args.title)
+        wandb.config.update(args)
 
     world_size = torch.cuda.device_count()
-
     mp.spawn(model_training, args=[world_size], nprocs=world_size)
