@@ -184,7 +184,7 @@ def model_training(gpu_id, world_size):
     """
     Model training and validation
     """
-
+    # setup DDP
     ddp_setup(gpu_id, world_size)
 
     model, loss_fn, optimizer, scheduler = setup(gpu_id)
@@ -273,6 +273,8 @@ def model_training(gpu_id, world_size):
                 batch_size = data['ogm'].size(dim=0)
                 current = (batch * BATCH_SIZE + batch_size) * world_size
                 print(f"\nobs. loss: {obs_loss:>7f}, occl. loss:  {occ_loss:>7f}, flow loss: {flow_loss:>7f}, warp loss: {warp_loss:>7f}  [{current:>5d}/{size:>5d}]", flush=True)
+                if args.wandb:
+                    wandb.log({'train/obs_loss': obs_loss, 'train/occ_loss': occ_loss, 'train/flow_loss': flow_loss, 'train/warp_loss': warp_loss})
         
 
         scheduler.step()
@@ -338,7 +340,8 @@ def model_training(gpu_id, world_size):
                     batch_size = data['ogm'].size(dim=0)
                     current = (batch * BATCH_SIZE + batch_size) * world_size
                     print(f"\nobs. loss: {obs_loss:>7f}, occl. loss:  {occ_loss:>7f}, flow loss: {flow_loss:>7f}, warp loss: {warp_loss:>7f}  [{current:>5d}/{size:>5d}]", flush=True)
-
+                    if args.wandb:
+                        wandb.log({'val/obs_loss': obs_loss, 'val/occ_loss': occ_loss, 'val/flow_loss': flow_loss, 'val/warp_loss': warp_loss})
 
         val_res_dict = valid_metrics.compute()
         
@@ -358,6 +361,10 @@ def model_training(gpu_id, world_size):
             }, f'{SAVE_DIR}/model_{epoch+1}.pt')
     
     destroy_process_group()
+
+    if args.wandb:
+        wandb.finish()
+    print('Finished Training. Model Saved!')
 
 parser = argparse.ArgumentParser(description='OFMPNet Training')
 parser.add_argument('--save_dir', type=str,
@@ -387,6 +394,7 @@ BATCH_SIZE = args.batch_size
 EPOCHS = args.epochs
 LR = args.lr
 
+os.path.exists(SAVE_DIR) or os.makedirs(SAVE_DIR)
 
 if __name__ == "__main__":
     # set up wandb

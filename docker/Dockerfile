@@ -17,6 +17,7 @@ RUN pip3 install tensorflow-addons
 # RUN pip install keras==2.6
 RUN pip3 install wandb
 RUN pip3 install torch torchvision --extra-index-url https://download.pytorch.org/whl/cu113
+RUN pip3 install scikit-learn torchmetrics torchinfo
 
 ARG USER=user
 ARG UID=1000
