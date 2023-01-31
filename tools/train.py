@@ -142,7 +142,8 @@ def setup(gpu_id):
     ogm_weight=ogm_weight, occ_weight=occ_weight,flow_origin_weight=flow_origin_weight,flow_weight=flow_weight,use_focal_loss=True)
     optimizer = torch.optim.NAdam(model.parameters(), lr=LR) 
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=int(30438*1.5), T_mult=1)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 3, 0.5) 
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 500000 * 10, eta_min=0, last_epoch=- 1, verbose=False)
+    # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 3, 0.5) 
     return model, loss_fn, optimizer, scheduler
 
 def get_dataloader(gpu_id, world_size):
