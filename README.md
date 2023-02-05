@@ -4,8 +4,6 @@ Another Multi-modal Hierarchical Transformer for Occupancy Flow Field and Motion
 ![workflow](https://github.com/YoushaaMurhij/OFMPNet/actions/workflows/main.yml/badge.svg) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT) ![Visitor count](https://shields-io-visitor-counter.herokuapp.com/badge?page=YoushaaMurhij/OFMPNet)
 ## Demo:
 
-## News:
-
 ## Abstract:
 
 ## Main results:
@@ -31,7 +29,7 @@ python3 tools/train.py --title experiment_title
 python3 tools/inference.py 
 ```
 ## License:
-OFPOFMPNet TrajNet is released under MIT license (see [LICENSE](./LICENSE)). It is developed based on a forked version of STrajNet. We also used code from [OFPNet](https://github.com/YoushaaMurhij/OFPNet), and [FMFNet](https://github.com/YoushaaMurhij/FMFNet).
+OFMPNet is released under MIT license (see [LICENSE](./LICENSE)). It is developed based on a forked version of STrajNet. We also used code from [OFPNet](https://github.com/YoushaaMurhij/OFPNet), [Swin-Transformer](https://github.com/microsoft/Swin-Transformer) and [FMFNet](https://github.com/YoushaaMurhij/FMFNet).
 
 ## Contact:
 Questions and suggestions are welcome! </br>
