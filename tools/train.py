@@ -1,29 +1,26 @@
 
 import os
-import torch
-import torch.nn as nn
 import math
-import copy
-import numpy as np
 import argparse
-from waymo_open_dataset.protos import occupancy_flow_metrics_pb2
-from google.protobuf import text_format
-import core.utils.occupancy_flow_grids as occupancy_flow_grids
+from tqdm import tqdm
 
+from google.protobuf import text_format
+from waymo_open_dataset.protos import occupancy_flow_metrics_pb2
+
+import torch
 import torch.multiprocessing as mp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler
 from torch.distributed import init_process_group, destroy_process_group
 
+from torchmetrics import MeanMetric
 from core.losses.loss import OGMFlow_loss
 from core.models.OFMPNet import OFMPNet
-
-from torchmetrics import MeanMetric
-import core.utils.occu_metric as occupancy_flow_metrics
-from core.utils.metrics import OGMFlowMetrics, print_metrics
 from core.datasets.WODataset import WODataset
+from core.utils.metrics import OGMFlowMetrics, print_metrics
+import core.utils.occu_metric as occupancy_flow_metrics
+import core.utils.occupancy_flow_grids as occupancy_flow_grids
 
-from tqdm import tqdm
 
 config = occupancy_flow_metrics_pb2.OccupancyFlowTaskConfig()
 with open('configs/waymo_ofp.config', 'r') as f:
@@ -31,13 +28,12 @@ with open('configs/waymo_ofp.config', 'r') as f:
     text_format.Parse(config_text, config)
 
 # loss weights
-ogm_weight = 1000.0
-occ_weight = 1000.0
-flow_origin_weight = 1000.0
+ogm_weight  = 1000.0
+occ_weight  = 1000.0
 flow_weight = 1.0
+flow_origin_weight = 1000.0
 
 # torch.autograd.set_detect_anomaly(True)
-
 def ddp_setup(rank, world_size):
     """
     Args:
@@ -85,8 +81,7 @@ def _get_pred_waypoint_logits(
     return pred_waypoint_logits
 
 def _apply_sigmoid_to_occupancy_logits(
-    pred_waypoint_logits: occupancy_flow_grids.WaypointGrids
-) -> occupancy_flow_grids.WaypointGrids:
+    pred_waypoint_logits: occupancy_flow_grids.WaypointGrids) -> occupancy_flow_grids.WaypointGrids:
     """Converts occupancy logits with probabilities."""
     pred_waypoints = occupancy_flow_grids.WaypointGrids()
     pred_waypoints.vehicles.observed_occupancy = [
@@ -135,15 +130,15 @@ def setup(gpu_id):
     """
     Setup model, DDP, loss, optimizer and scheduler
     """
-    cfg=dict(input_size=(512,512), window_size=8, embed_dim=96, depths=[2,2,2], num_heads=[3,6,12])
+    cfg = dict(input_size=(512,512), window_size=8, embed_dim=96, depths=[2,2,2], num_heads=[3,6,12])
     model = OFMPNet(cfg,actor_only=True,sep_actors=False, fg_msa=True, fg=True).to(gpu_id)
     model = DDP(model, device_ids=[gpu_id])
     loss_fn = OGMFlow_loss(config,no_use_warp=True,use_pred=False,use_gt=True,
-    ogm_weight=ogm_weight, occ_weight=occ_weight,flow_origin_weight=flow_origin_weight,flow_weight=flow_weight,use_focal_loss=True)
+    ogm_weight = ogm_weight, occ_weight=occ_weight,flow_origin_weight=flow_origin_weight,flow_weight=flow_weight,use_focal_loss=True)
     optimizer = torch.optim.NAdam(model.parameters(), lr=LR) 
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=int(30438*1.5), T_mult=1)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 500000 * 10, eta_min=0, last_epoch=- 1, verbose=False)
-    # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 3, 0.5) 
+    # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 500000 * 10, eta_min=0, last_epoch=- 1, verbose=False)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 3, 0.5) 
     return model, loss_fn, optimizer, scheduler
 
 def get_dataloader(gpu_id, world_size):
@@ -274,8 +269,8 @@ def model_training(gpu_id, world_size):
             train_loss_flow.update(loss_dict['flow'])
             train_loss_warp.update(loss_dict['flow_warp_xe'])
 
-            obs_loss = train_loss.compute()/ogm_weight
-            occ_loss = train_loss_occ.compute()/occ_weight
+            obs_loss  = train_loss.compute()/ogm_weight
+            occ_loss  = train_loss_occ.compute()/occ_weight
             flow_loss = train_loss_flow.compute()/flow_weight
             warp_loss = train_loss_warp.compute()/flow_origin_weight
             
@@ -295,8 +290,8 @@ def model_training(gpu_id, world_size):
             train_size = current
             print(f"Validation\n-------------------------------")
         size = val_size or 0
-        valid_loss = MeanMetric().to(gpu_id)
-        valid_loss_occ = MeanMetric().to(gpu_id)
+        valid_loss      = MeanMetric().to(gpu_id)
+        valid_loss_occ  = MeanMetric().to(gpu_id)
         valid_loss_flow = MeanMetric().to(gpu_id)
         valid_loss_warp = MeanMetric().to(gpu_id)
 
@@ -316,9 +311,9 @@ def model_training(gpu_id, world_size):
                 flow = data['vec_flow']
 
                 # ground truths directly put on device for loss / metrics
-                gt_obs_ogm = data['gt_obs_ogm'].to(gpu_id)
-                gt_occ_ogm = data['gt_occ_ogm'].to(gpu_id)
-                gt_flow = data['gt_flow'].to(gpu_id)
+                gt_obs_ogm  = data['gt_obs_ogm'].to(gpu_id)
+                gt_occ_ogm  = data['gt_occ_ogm'].to(gpu_id)
+                gt_flow     = data['gt_flow'].to(gpu_id)
                 origin_flow = data['origin_flow'].to(gpu_id)
 
 
@@ -341,8 +336,8 @@ def model_training(gpu_id, world_size):
                 metrics = val_metric_func(config,true_waypoints,pred_waypoints)
                 valid_metrics.update(metrics)
 
-                obs_loss = valid_loss.compute()/ogm_weight
-                occ_loss = valid_loss_occ.compute()/occ_weight
+                obs_loss  = valid_loss.compute()/ogm_weight
+                occ_loss  = valid_loss_occ.compute()/occ_weight
                 flow_loss = valid_loss_flow.compute()/flow_weight
                 warp_loss = valid_loss_warp.compute()/flow_origin_weight
                 
@@ -408,7 +403,6 @@ LR = args.lr
 os.path.exists(SAVE_DIR) or os.makedirs(SAVE_DIR)
 
 if __name__ == "__main__":
-
 
     world_size = torch.cuda.device_count()
     mp.spawn(model_training, args=[world_size], nprocs=world_size)

@@ -1,26 +1,20 @@
+import os
+import zlib
+import glob
 import torch
 import numpy as np
-
 from tqdm import tqdm
 
+from google.protobuf import text_format
 from waymo_open_dataset.protos import occupancy_flow_metrics_pb2
 from waymo_open_dataset.protos import occupancy_flow_submission_pb2
 
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group, destroy_process_group
-from torch.utils.data.distributed import DistributedSampler
 
-import core.utils.occupancy_flow_grids as occupancy_flow_grids
-
-from google.protobuf import text_format
-
+from core.models.OFMPNet import OFMPNet
 from core.datasets.WODataset import WODataset
-
-import glob
-
-import os
-from typing import Dict, List
-import zlib
+import core.utils.occupancy_flow_grids as occupancy_flow_grids
 
 
 #configuration
@@ -28,7 +22,6 @@ config = occupancy_flow_metrics_pb2.OccupancyFlowTaskConfig()
 with open('configs/waymo_ofp.config', 'r') as f:
     config_text = f.read()
     text_format.Parse(config_text, config)
-
 print(config)
 
 # Hyper parameters
@@ -92,7 +85,6 @@ def _apply_sigmoid_to_occupancy_logits(
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 print('load_model...')
 
-from core.models.OFMPNet import OFMPNet
 cfg=dict(input_size=(512,512), window_size=8, embed_dim=96, depths=[2,2,2], num_heads=[3,6,12])
 model = OFMPNet(cfg,actor_only=True,sep_actors=False,fg_msa=True, fg=True)
 model.to(device)
@@ -143,7 +135,6 @@ def _add_waypoints_to_scenario_prediction(
     flow_bytes = zlib.compress(flow_quantized.tobytes())
     waypoint_message.all_vehicles_flow = flow_bytes
 
-from tqdm import tqdm
 
 def model_testing(test_path, shard, ids):
     print(f'Creating submission for test shard {shard}...')
@@ -180,7 +171,6 @@ def _make_submission_proto(
     submission = occupancy_flow_submission_pb2.ChallengeSubmission()
     submission.account_name = ''
     submission.unique_method_name = ''
-    # submission.authors.extend([''])
     submission.authors.extend([''])
     submission.description = ''
     submission.method_link = ''
@@ -191,12 +181,8 @@ def _save_submission_to_file(
     shard: str,
 ) -> None:
     """Save predictions for one test shard as a binary protobuf."""
-    # save_folder = os.path.join(pathlib.Path.home(),
-    #                             'occupancy_flow_challenge/testing')
-    # save_folder = os.path.join(SAVE_DIR,
-    #                             '/test6')
+
     save_folder = args.save_dir
-     
     os.makedirs(save_folder, exist_ok=True)
     submission_basename = 'occupancy_flow_submission.binproto' + '-' + shard + '-of-00150'
 
@@ -236,7 +222,6 @@ def id_checking(test=True):
         print(f'original ids num:{len(test_scenario_ids)}')
         test_scenario_ids = set(test_scenario_ids)
     return test_scenario_ids
-
 
 
 if __name__ == "__main__":
