@@ -288,7 +288,7 @@ class OGMFlow_loss():
     ) -> torch.Tensor:
         labels=self._batch_flatten(true_occupancy)
         sig_logits = self._batch_flatten(torch.sigmoid(pred_occupancy_obs)+torch.sigmoid(pred_occupancy_occ))
-        sig_logits = torch.clip_by_value(sig_logits,0,1)
+        sig_logits = torch.clamp(sig_logits,0,1)
         joint_flow_occ_logits =  self._batch_flatten(warped_origin)*sig_logits
         if self.use_focal_loss:
             xe_sum = torch.sum(self.flow_focal_loss(labels,joint_flow_occ_logits)) + torch.sum(self.bce(labels,joint_flow_occ_logits))

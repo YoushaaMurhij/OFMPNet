@@ -138,7 +138,7 @@ def setup(gpu_id):
     cfg=dict(input_size=(512,512), window_size=8, embed_dim=96, depths=[2,2,2], num_heads=[3,6,12])
     model = OFMPNet(cfg,actor_only=True,sep_actors=False, fg_msa=True, fg=True).to(gpu_id)
     model = DDP(model, device_ids=[gpu_id])
-    loss_fn = OGMFlow_loss(config,no_use_warp=False,use_pred=False,use_gt=True,
+    loss_fn = OGMFlow_loss(config,no_use_warp=True,use_pred=False,use_gt=True,
     ogm_weight=ogm_weight, occ_weight=occ_weight,flow_origin_weight=flow_origin_weight,flow_weight=flow_weight,use_focal_loss=True)
     optimizer = torch.optim.NAdam(model.parameters(), lr=LR) 
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=int(30438*1.5), T_mult=1)
@@ -162,7 +162,8 @@ def get_dataloader(gpu_id, world_size):
         shuffle=False, # done by the sampler
         pin_memory=True,
         num_workers=4,
-        sampler=DistributedSampler(dataset)
+        sampler=DistributedSampler(dataset),
+        drop_last=True
     )
 
     val_dataset = WODataset(
@@ -176,7 +177,8 @@ def get_dataloader(gpu_id, world_size):
         shuffle=False, # done by the sampler
         pin_memory=True,
         num_workers=4,
-        sampler=DistributedSampler(val_dataset)
+        sampler=DistributedSampler(val_dataset),
+        drop_last=True
     )
 
     return train_loader, val_loader
@@ -383,7 +385,7 @@ parser.add_argument('--file_dir', type=str, help='Training Val Dataset directory
 parser.add_argument('--model_path', type=str,
                     help='loaded weight path', default=None)
 parser.add_argument('--batch_size', type=int, help='batch_size', default=2)
-parser.add_argument('--epochs', type=int, help='training eps', default=15)
+parser.add_argument('--epochs', type=int, help='training eps', default=6)
 parser.add_argument('--lr', type=float,
                     help='initial learning rate', default=1e-4)
 parser.add_argument('--wandb', type=bool, help='wandb logging', default=False)
