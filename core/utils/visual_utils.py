@@ -9,7 +9,6 @@ import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 
 
-
 def create_figure_and_axes(size_pixels):
     """Initializes a unique figure and axes for plotting."""
     fig, ax = plt.subplots(1, 1, num=uuid.uuid4())
@@ -83,15 +82,15 @@ def get_viewport(all_states, all_states_mask):
 
 
 def visualize_one_step(
-    states,
-    mask,
-    roadgraph,
-    title,
-    center_y,
-    center_x,
-    width,
-    color_map,
-    size_pixels=1000):
+        states,
+        mask,
+        roadgraph,
+        title,
+        center_y,
+        center_x,
+        width,
+        color_map,
+        size_pixels=1000):
     """
     Generate visualization for a single step.
     """
@@ -170,7 +169,8 @@ def visualize_all_agents_smooth(decoded_example, size_pixels=1000):
     color_map = get_colormap(num_agents)
 
     # [num_agents, num_past_steps + 1 + num_future_steps, depth] float32.
-    all_states = np.concatenate([past_states, current_states, future_states], 1)
+    all_states = np.concatenate(
+        [past_states, current_states, future_states], 1)
 
     # [num_agents, num_past_steps + 1 + num_future_steps] float32.
     all_states_mask = np.concatenate(
@@ -204,11 +204,13 @@ def visualize_all_agents_smooth(decoded_example, size_pixels=1000):
             np.split(future_states, num_future_steps, 1),
             np.split(future_states_mask, num_future_steps, 1))):
         im = visualize_one_step(s[:, 0], m[:, 0], roadgraph_xyz,
-                                'future: %d' % (i + 1), center_y, center_x, width,
+                                'future: %d' % (
+                                    i + 1), center_y, center_x, width,
                                 color_map, size_pixels)
     images.append(im)
 
     return images
+
 
 def create_animation(images, interval=100):
     """ 
@@ -245,7 +247,7 @@ def create_animation(images, interval=100):
     plt.close(fig)
     return anim
 
-    
+
 def occupancy_rgb_image(agent_grids, roadgraph_image, gamma: float = 1.6):
     """
     Visualize predictions or ground-truth occupancy.
@@ -257,26 +259,29 @@ def occupancy_rgb_image(agent_grids, roadgraph_image, gamma: float = 1.6):
     Returns:
         [batch_size, height, width, 3] float32 RGB image.
     """
-    zeros = torch.zeros_like(roadgraph_image)
-    ones  = torch.ones_like(zeros)
 
-    agents = agent_grids
-    veh = zeros if agents['vehicles'] is None else agents['vehicles'] # torch.permute(agents['vehicles'], (0, 3, 1, 2)) #torch.squeeze(agents['vehicles'], -1)
-    ped = zeros if agents['pedestrians'] is None else agents['pedestrians']
-    cyc = zeros if agents['cyclists'] is None else agents['cyclists']
+    roadgraph_image = roadgraph_image[:, :, :, 0].cuda()
+    roadgraph_image = torch.unsqueeze(roadgraph_image, -1)
+    zeros = torch.zeros_like(roadgraph_image).cuda()
+    ones = torch.ones_like(zeros).cuda()
+
+    veh = zeros if agent_grids.vehicles is None else agent_grids.vehicles
+    ped = zeros if agent_grids.pedestrians is None else agent_grids.pedestrians
+    cyc = zeros if agent_grids.cyclists is None else agent_grids.cyclists
 
     veh = torch.pow(veh, 1 / gamma)
     ped = torch.pow(ped, 1 / gamma)
     cyc = torch.pow(cyc, 1 / gamma)
 
     # Convert layers to RGB.
-    rg_rgb  = torch.concat([zeros, zeros, zeros], axis=-1)
+    rg_rgb = torch.concat([zeros, zeros, zeros], axis=-1)
     veh_rgb = torch.concat([veh, zeros, zeros], axis=-1)  # Red.
     ped_rgb = torch.concat([zeros, ped * 0.67, zeros], axis=-1)  # Green.
-    cyc_rgb = torch.concat([cyc * 0.33, zeros, zeros * 0.33], axis=-1)  # Purple.
-    bg_rgb  = torch.concat([ones, ones, ones], axis=-1)  # White background.
+    cyc_rgb = torch.concat([cyc * 0.33, zeros, zeros], axis=-1)  # Purple.
+    bg_rgb = torch.concat([ones, ones, ones], axis=-1)  # White background.
     # Set alpha layers over all RGB channels.
-    rg_a  = torch.concat([roadgraph_image, roadgraph_image, roadgraph_image], axis=-1)
+    rg_a = torch.concat(
+        [roadgraph_image, roadgraph_image, roadgraph_image], axis=-1)
     veh_a = torch.concat([veh, veh, veh], axis=-1)
     ped_a = torch.concat([ped, ped, ped], axis=-1)
     cyc_a = torch.concat([cyc, cyc, cyc], axis=-1)
@@ -288,7 +293,7 @@ def occupancy_rgb_image(agent_grids, roadgraph_image, gamma: float = 1.6):
     return img
 
 
-def _alpha_blend(fg, bg, fg_a = None, bg_a = None):
+def _alpha_blend(fg, bg, fg_a=None, bg_a=None):
     """
     Overlays foreground and background image with custom alpha values.
     Implements alpha compositing using Porter/Duff equations.
@@ -314,45 +319,6 @@ def _alpha_blend(fg, bg, fg_a = None, bg_a = None):
     out_rgb = (fg * fg_a + bg * bg_a * (1 - fg_a)) / (out_a + eps)
     return out_rgb, out_a
 
-def get_observed_occupancy_at_waypoint(waypoints, k: int):
-    """
-    Returns occupancies of currently-observed agents at waypoint k.
-    """
-    agent_grids = {'vehicles': None, 'pedestrians': None, 'cyclists' : None}
-    if waypoints['vehicles']['observed_occupancy']:
-      agent_grids['vehicles'] = waypoints['vehicles']['observed_occupancy'][k]
-    if waypoints['pedestrians'] and waypoints['pedestrians']['observed_occupancy']:
-      agent_grids['pedestrians'] = waypoints['pedestrians']['observed_occupancy'][k]
-    if waypoints['cyclists'] and waypoints['cyclists']['observed_occupancy']:
-      agent_grids['cyclists'] = waypoints['cyclists']['observed_occupancy'][k]
-    return agent_grids
-
-def get_occluded_occupancy_at_waypoint(waypoints, k: int):
-    """
-    Returns occupancies of currently-occluded agents at waypoint k.
-    """
-    agent_grids = {'vehicles': None, 'pedestrians': None, 'cyclists' : None}
-    if waypoints['vehicles']['occluded_occupancy']:
-      agent_grids['vehicles'] = waypoints['vehicles']['occluded_occupancy'][k]
-    if waypoints['pedestrians'] and waypoints['pedestrians']['occluded_occupancy']:
-      agent_grids['pedestrians'] = waypoints['pedestrians']['occluded_occupancy'][k]
-    if waypoints['cyclists'] and waypoints['cyclists']['occluded_occupancy']:
-      agent_grids['cyclists'] = waypoints['cyclists']['occluded_occupancy'][k]
-    return agent_grids
-
-def get_flow_at_waypoint(waypoints, k: int):
-    """
-    Returns flow fields of all agents at waypoint k.
-    """
-    agent_grids = {'vehicles': None, 'pedestrians': None, 'cyclists' : None}
-    if waypoints['vehicles']['flow']:
-      agent_grids['vehicles'] = waypoints['vehicles']['flow'][k]
-    if waypoints['pedestrians'] and waypoints['pedestrians']['flow']:
-      agent_grids['pedestrians'] = waypoints['pedestrians']['flow'][k]
-    if waypoints['cyclists'] and waypoints['cyclists']['flow']:
-      agent_grids['cyclists'] = waypoints['cyclists']['flow'][k]
-    return agent_grids
-
 
 def flow_rgb_image(flow, roadgraph_image, agent_trails=None):
     """
@@ -365,6 +331,8 @@ def flow_rgb_image(flow, roadgraph_image, agent_trails=None):
     Returns:
         [batch_size, height, width, 3] float32 RGB image.
     """
+    roadgraph_image = roadgraph_image[:, :, :, 0].cuda()
+    roadgraph_image = torch.unsqueeze(roadgraph_image, -1)
     # Swap x, y for compatibilty with published visualizations.
     flow = torch.roll(flow, shifts=1, dims=-1)
     # saturate_magnitude=-1 normalizes highest intensity to largest magnitude.
@@ -372,7 +340,9 @@ def flow_rgb_image(flow, roadgraph_image, agent_trails=None):
     # Add roadgraph.
     flow_image = _add_grayscale_layer(roadgraph_image, flow_image)  # Black.
     # Overlay agent trails.
-    # flow_image = _add_grayscale_layer(agent_trails * 0.2, flow_image)  # 0.2 alpha
+    if agent_trails:
+        flow_image = _add_grayscale_layer(
+            agent_trails * 0.2, flow_image)  # 0.2 alpha
 
     return flow_image
 
@@ -387,9 +357,11 @@ def _add_grayscale_layer(fg_a, scene_rgb):
     overlay, _ = _alpha_blend(fg=black, bg=scene_rgb, fg_a=fg_a, bg_a=1.0)
     return overlay
 
+
 ONE = torch.ones((1)).to('cuda:0')
 
-def _optical_flow_to_hsv(flow, saturate_magnitude = -1.0, name=None):
+
+def _optical_flow_to_hsv(flow, saturate_magnitude=-1.0, name=None):
     """
     Visualize an optical flow field in HSV colorspace.
     This uses the standard color code with hue corresponding to direction of
@@ -415,12 +387,14 @@ def _optical_flow_to_hsv(flow, saturate_magnitude = -1.0, name=None):
     """
 
     with tf.name_scope(name or 'OpticalFlowToHSV'):
-        
+
         flow_shape = flow.shape
         if len(flow_shape) < 3:
-            raise ValueError('flow must be at least 3-dimensional, got' f' `{flow_shape}`')
+            raise ValueError(
+                'flow must be at least 3-dimensional, got' f' `{flow_shape}`')
         if flow_shape[-1] != 2:
-            raise ValueError(f'flow must have innermost dimension of 2, got' f' `{flow_shape}`')
+            raise ValueError(
+                f'flow must have innermost dimension of 2, got' f' `{flow_shape}`')
 
         height = flow_shape[-3]
         width = flow_shape[-2]
@@ -432,7 +406,8 @@ def _optical_flow_to_hsv(flow, saturate_magnitude = -1.0, name=None):
         magnitudes = torch.sqrt(torch.square(dx) + torch.square(dy))
         if saturate_magnitude < 0:
             # [batch_size, 1, 1]
-            local_saturate_magnitude = torch.amax(magnitudes, dim=(1, 2), keepdim=True)
+            local_saturate_magnitude = torch.amax(
+                magnitudes, dim=(1, 2), keepdim=True)
         else:
             local_saturate_magnitude = torch.tensor(saturate_magnitude)
 
@@ -440,16 +415,19 @@ def _optical_flow_to_hsv(flow, saturate_magnitude = -1.0, name=None):
         hue = (torch.remainder(torch.atan2(dy, dx), (2 * math.pi))) / (2 * math.pi)
         # Saturation is relative magnitude.
         relative_magnitudes = torch.div(magnitudes, local_saturate_magnitude)
-        saturation = torch.minimum(relative_magnitudes, ONE)  # Larger magnitudes saturate.
-        
+        # Larger magnitudes saturate.
+        saturation = torch.minimum(relative_magnitudes, ONE)
+
         # Value is fixed.
         value = torch.ones_like(saturation)
         hsv_flat = torch.stack((hue, saturation, value), axis=-1)
 
-        return torch.reshape(hsv_flat, (256, 256, 3))   # TODO dont hardcore grid size
+        # TODO dont hardcore grid size
+        return torch.reshape(hsv_flat, (256, 256, 3))
+
 
 def _optical_flow_to_rgb(
-    flow, saturate_magnitude= -1.0,name= None):
+        flow, saturate_magnitude=-1.0, name=None):
     """
     Visualize an optical flow field in RGB colorspace.
     """
@@ -463,7 +441,7 @@ def _optical_flow_to_rgb(
 
 
 def hsv2rgb(input):
-    assert(input.shape[1] == 3)
+    assert (input.shape[1] == 3)
 
     h, s, v = input[:, 0], input[:, 1], input[:, 2]
     h_ = (h - torch.floor(h / 360) * 360) / 60
@@ -480,6 +458,7 @@ def hsv2rgb(input):
         torch.stack((c, zero, x), dim=1),
     ), dim=0)
 
-    index = torch.repeat_interleave(torch.floor(h_).unsqueeze(1), 3, dim=1).unsqueeze(0).to(torch.long)
+    index = torch.repeat_interleave(torch.floor(h_).unsqueeze(
+        1), 3, dim=1).unsqueeze(0).to(torch.long)
     rgb = (y.gather(dim=0, index=index) + (v - c)).squeeze(0)
     return rgb
