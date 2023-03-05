@@ -1,7 +1,9 @@
 import os
 import zlib
 import glob
+import time
 import torch
+import argparse
 import numpy as np
 from tqdm import tqdm
 
@@ -112,8 +114,13 @@ def infer_step(data):
     ogm = data['ogm'].to(device)
     flow = data['vec_flow'].to(device)
 
+    torch.cuda.synchronize()
+    t = time.time()
     outputs = model(ogm, map_img, obs=actors, occ=occl_actors,
                     mapt=centerlines, flow=flow)
+    torch.cuda.synchronize()
+
+    print("Inference forward time: {T:.3f}".format(T = time.time() - t))
     logits = _get_pred_waypoint_logits(outputs)
 
     pred_waypoints = _apply_sigmoid_to_occupancy_logits(logits)
@@ -217,7 +224,6 @@ def id_checking(test=True):
 
 
 if __name__ == "__main__":
-    import argparse
     parser = argparse.ArgumentParser(description='Inference')
     parser.add_argument('--ids_dir', type=str, help='ids.txt downloads from Waymos',
                         default="./Waymo_Dataset/occupancy_flow_challenge")
@@ -226,7 +232,7 @@ if __name__ == "__main__":
     parser.add_argument('--file_dir', type=str, help='Test Dataset directory',
                         default="./Waymo_Dataset/preprocessed_data/val_numpy")
     parser.add_argument('--weight_path', type=str,
-                        help='Model weights directory', default="./experiments/epoch_8.pt")
+                        help='Model weights directory', default="./pretrained/epoch_15.pt")
     args = parser.parse_args()
 
     checkpoint = torch.load(args.weight_path, map_location=device)

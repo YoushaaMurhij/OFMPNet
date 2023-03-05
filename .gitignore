@@ -1,5 +1,5 @@
 __pycache__
-
+pretrained/
 experiments/
 wandb/
 **/__pycache__/
