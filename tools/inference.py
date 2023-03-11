@@ -26,7 +26,6 @@ print(config)
 
 # Hyper parameters
 NUM_PRED_CHANNELS = 4
-TEST =True
 
 def parse_record_test(features):
 
@@ -169,10 +168,10 @@ def _make_submission_proto(
 ) -> occupancy_flow_submission_pb2.ChallengeSubmission:
     """Makes a submission proto to store predictions for one shard."""
     submission = occupancy_flow_submission_pb2.ChallengeSubmission()
-    submission.account_name = ''
-    submission.unique_method_name = ''
-    submission.authors.extend([''])
-    submission.description = ''
+    submission.account_name = args.account
+    submission.unique_method_name = args.method
+    submission.authors.extend([args.author.replace('_', ' ')])
+    submission.description = args.description
     submission.method_link = ''
     return submission
 
@@ -229,15 +228,32 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Inference')
     parser.add_argument('--ids_dir', type=str, help='ids.txt downloads from Waymos', default="./Waymo_Dataset/occupancy_flow_challenge")
     parser.add_argument('--save_dir', type=str, help='saving directory',default="./Waymo_Dataset/inference/torch")
-    parser.add_argument('--file_dir', type=str, help='Test Dataset directory',default="./Waymo_Dataset/preprocessed_data/test_numpy")
+    parser.add_argument('--file_dir', type=str, help='Test Dataset directory',default="./Waymo_Dataset/preprocessed_data/")
     parser.add_argument('--weight_path', type=str, help='Model weights directory',default="./experiments/model_1.pt")
+    parser.add_argument('--split', type=str, help='Test or Val split', default="Val")
+    parser.add_argument('--method', type=str, help='Unique method name', default="OFMPNet")
+    parser.add_argument('--description', type=str, help='Unique method name', default="Multi-Model Transformer with LSTM")
+    parser.add_argument('--account', type=str, help='Account email', default="")
+    parser.add_argument('--author', type=str, help='Author name', default="")
     args = parser.parse_args()
 
+    if args.split == 'Val':
+        TEST = False
+        args.save_dir += '/' + args.split
+        args.file_dir += 'val_numpy'
+        v_filenames = glob.glob(args.file_dir + "/*.npz")
+        print(f'{len(v_filenames)} val files found, start loading dataset')
+    else:
+        TEST = True
+        args.save_dir += '/' + args.split
+        args.file_dir += 'test_numpy'
+        v_filenames = glob.glob(args.file_dir + "/*.npz")
+        print(f'{len(v_filenames)} test files found, start loading dataset')    
+        
     checkpoint = torch.load(args.weight_path, map_location=device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
-
-    v_filenames = glob.glob(args.file_dir + "/*.npz")
+ 
     shards = set(map(lambda f: f.split('/')[-1].split('_')[0], v_filenames))
     print(f'{len(shards)} found, start loading dataset')
     test_scenario_ids = id_checking(test=TEST)
