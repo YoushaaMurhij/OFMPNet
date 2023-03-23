@@ -163,7 +163,7 @@ class OGMFlow_loss():
             else:
                 res = 1.0
             f_c.append(res)
-            loss_dict['flow'].append(res*self._flow_loss(true_flow,pred_flow))
+            loss_dict['flow'].append((k+1)*res*self._flow_loss(true_flow,pred_flow))
 
             # flow warp_loss:
             if not self.no_use_warp:
