@@ -69,11 +69,12 @@ class FGMSA(nn.Module):
         summary(self)
     
     def _get_offset(self,x):
-        x = self.conv_offset_0(x)
-        x = torch.reshape(x,[-1,self.nc, self.q_h*self.q_w])
-        x = x.permute(0,2,1)
+        # x [B, C, H, W]
+        x = self.conv_offset_0(x) # [B, C, H, W]
+        x = x.permute(0,2,3,1) # [B, H, W, C]
+        x = torch.reshape(x,[-1, self.q_h*self.q_w, self.nc])
         x = self.conv_norm(x)
-        x = torch.reshape(x,[-1,self.nc, self.q_h,self.q_w])
+        x = torch.reshape(x,[-1, self.q_h,self.q_w, self.nc]) # [B, H, W, C]
         x = F.gelu(x)
         x = torch.reshape(torch.reshape(x,[-1,self.q_h,self.q_w,self.n_groups,self.n_group_channels]).permute([0,3,1,2,4]),[-1,self.q_h,self.q_w,self.n_group_channels])
         x = x.permute(0,3,1,2) # channels as 2nd dim
@@ -98,7 +99,7 @@ class FGMSA(nn.Module):
         B, H, W,C = x.size()
         x = x.permute(0,3,1,2) # channels as 2nd dim
         q = self.proj_q(x)
-        offset = self._get_offset(q)
+        offset = self._get_offset(q) # [B, H, W, 2]
         _,Hk,Wk,_ = offset.size()
         n_sample = Hk * Wk
         
@@ -109,8 +110,10 @@ class FGMSA(nn.Module):
             self.ref_res = torch.reshape(offset,(B,self.n_groups, Hk, Wk, 2))
         
         if self.fg:
-            time_offset = torch.reshape(offset,(B * self.n_groups, 2, Hk, Wk))
+            time_offset = torch.reshape(offset,(B * self.n_groups, Hk, Wk, 2))
+            time_offset = time_offset.permute(0,3,1,2) # channels as 2nd dim
             flow_hidden = self.conv_offset_proj2(time_offset)
+            flow_hidden = flow_hidden.permute(0,2,3,1) # channels last
             flow_hidden = torch.reshape(flow_hidden,(B, self.n_groups, Hk,Wk, self.out_dim))
         
         if self.use_last_ref:
@@ -126,6 +129,7 @@ class FGMSA(nn.Module):
         else:
             pos = torch.tanh(offset + reference)
         
+        x = x.permute(0,2,3,1) # channels last
         x = torch.reshape(torch.reshape(x,[B, H, W,self.n_groups,self.n_group_channels]).permute([0,3,1,2,4]),[B*self.n_groups, H, W,self.n_group_channels])
         
         warp = torch.concat([pos[...,1][...,np.newaxis],pos[...,0][...,np.newaxis]],dim=-1)

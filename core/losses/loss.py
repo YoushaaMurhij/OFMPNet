@@ -25,7 +25,6 @@ def sigmoid_focal_loss(
     alpha: float = 0.25,
     gamma: float = 2,
 ):
-    
     if from_logits:
         p = torch.sigmoid(inputs)
         ce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
@@ -73,9 +72,7 @@ class OGMFlow_loss():
         pred_waypoint_logits: occupancy_flow_grids.WaypointGrids,
         true_waypoints:occupancy_flow_grids.WaypointGrids,
         curr_ogm:torch.Tensor,
-        # gt_ogm: torch.Tensor,
-        # gt_occ: tf.Tensor,
-        # gt_flow: tf.Tensor,
+
     ) -> Dict[str, torch.Tensor]:
         """Loss function.
 
@@ -100,7 +97,6 @@ class OGMFlow_loss():
         loss_dict['flow'] = []
         loss_dict['flow_warp_xe'] = []
 
-        # loss_dict['flow_2'] = []
 
         #Preparation for flow warping:
         h = torch.arange(0, self.config.grid_height_cells, dtype=torch.float32, device=device)
@@ -271,6 +267,7 @@ class OGMFlow_loss():
         joint_flow_occ_logits = sig_logits * self._batch_flatten(warped_origin)
         # joint_flow_occ_logits = tf.clip_by_value(joint_flow_occ_logits,0,1)
         if self.use_focal_loss:
+            joint_flow_occ_logits = torch.clamp(joint_flow_occ_logits,1e-7,1 - 1e-7) # for numerical stability
             xe_sum = torch.sum(self.flow_focal_loss(targets=labels,inputs=joint_flow_occ_logits)) + torch.sum(self.bce(input=joint_flow_occ_logits, target=labels))
         else:
             xe_sum =torch.sum(F.binary_cross_entropy_with_logits(target=labels,input=joint_flow_occ_logits, reduction="none"))
@@ -288,13 +285,13 @@ class OGMFlow_loss():
     ) -> torch.Tensor:
         labels=self._batch_flatten(true_occupancy)
         sig_logits = self._batch_flatten(torch.sigmoid(pred_occupancy_obs)+torch.sigmoid(pred_occupancy_occ))
-        sig_logits = torch.clamp(sig_logits,0,1)
+        sig_logits = torch.clip_by_value(sig_logits,0,1)
         joint_flow_occ_logits =  self._batch_flatten(warped_origin)*sig_logits
         if self.use_focal_loss:
-            xe_sum = torch.sum(self.flow_focal_loss(labels,joint_flow_occ_logits)) + torch.sum(self.bce(labels,joint_flow_occ_logits))
+            xe_sum = torch.sum(self.flow_focal_loss(targets=labels,inputs=joint_flow_occ_logits)) + torch.sum(self.bce(target=labels,input=joint_flow_occ_logits))
         else:
             xe_sum =torch.sum(F.binary_cross_entropy_with_logits(target=labels,input=joint_flow_occ_logits,reduction="none"))
-        xe_sum = torch.sum( self.bce(labels,joint_flow_occ_logits) )
+        xe_sum = torch.sum(self.bce(target=labels,input=joint_flow_occ_logits) )
 
         # Return mean.
         return loss_weight * xe_sum / (torch.numel(true_occupancy)*self.replica)
@@ -332,21 +329,27 @@ class OGMFlow_loss():
         image_shape = input_tensor.size()
         return torch.reshape(input_tensor, [*image_shape[0:1], -1])
 
-
 def test_loss():
 
 
     dummy_pred_waypoint_logits = occupancy_flow_grids.WaypointGrids()
     dummy_true_waypoints = occupancy_flow_grids.WaypointGrids()
+    np.random.seed(42)
     for _ in range(8):
-        dummy_pred_waypoint_logits.vehicles.observed_occupancy.append(torch.zeros(1, 256, 256, 1))
-        dummy_pred_waypoint_logits.vehicles.occluded_occupancy.append(torch.zeros(1, 256, 256, 1))
-        dummy_pred_waypoint_logits.vehicles.flow.append(torch.zeros(1, 256, 256, 2))
+        dummy_pred_waypoint_logits.vehicles.observed_occupancy.append(
+            torch.tensor(np.random.logistic(size=(1,256,256,1))).to(torch.float32))
+        dummy_pred_waypoint_logits.vehicles.occluded_occupancy.append(
+            torch.tensor(np.random.logistic(size=(1,256,256,1))).to(torch.float32))
+        dummy_pred_waypoint_logits.vehicles.flow.append(torch.tensor(np.random.uniform(size=(1,256,256,2))).to(torch.float32))
 
-        dummy_true_waypoints.vehicles.observed_occupancy.append(torch.zeros(1, 256, 256, 1))
-        dummy_true_waypoints.vehicles.occluded_occupancy.append(torch.zeros(1, 256, 256, 1))
-        dummy_true_waypoints.vehicles.flow.append(torch.zeros(1, 256, 256, 2))
-        dummy_true_waypoints.vehicles.flow_origin_occupancy.append(torch.zeros(1, 256, 256, 1))
+        dummy_true_waypoints.vehicles.observed_occupancy.append(
+            torch.tensor(np.random.randint(2, size=(1,256,256,1))).to(torch.float32))
+        dummy_true_waypoints.vehicles.occluded_occupancy.append(
+            torch.tensor(np.random.randint(2, size=(1,256,256,1))).to(torch.float32))
+        dummy_true_waypoints.vehicles.flow.append(torch.tensor(np.random.uniform(size=(1,256,256,2))).to(torch.float32))
+        dummy_true_waypoints.vehicles.flow_origin_occupancy.append(
+            torch.tensor(np.random.randint(2, size=(1,256,256,1))).to(torch.float32))
+
 
     config = occupancy_flow_metrics_pb2.OccupancyFlowTaskConfig()
     config_text = """
@@ -366,9 +369,10 @@ def test_loss():
     text_format.Parse(config_text, config)
 
 
-    loss_fn = OGMFlow_loss(config, replica=1, no_use_warp=False, use_pred=False, use_gt=True, use_focal_loss=False)
+    loss_fn = OGMFlow_loss(config, replica=1, no_use_warp=False, use_pred=False, use_gt=True, use_focal_loss=True)
 
-    loss_fn(true_waypoints=dummy_true_waypoints,pred_waypoint_logits=dummy_pred_waypoint_logits,curr_ogm=None)
+    values = loss_fn(true_waypoints=dummy_true_waypoints,pred_waypoint_logits=dummy_pred_waypoint_logits,curr_ogm=None)
+    print(values)
 
 
 if __name__ == "__main__":

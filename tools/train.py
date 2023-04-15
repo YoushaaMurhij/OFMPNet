@@ -133,11 +133,9 @@ def setup(gpu_id):
     cfg = dict(input_size=(512,512), window_size=8, embed_dim=96, depths=[2,2,2], num_heads=[3,6,12])
     model = OFMPNet(cfg,actor_only=True,sep_actors=False, fg_msa=True, fg=True).to(gpu_id)
     model = DDP(model, device_ids=[gpu_id])
-    loss_fn = OGMFlow_loss(config,no_use_warp=True,use_pred=False,use_gt=True,
+    loss_fn = OGMFlow_loss(config,no_use_warp=False,use_pred=False,use_gt=True,
     ogm_weight = ogm_weight, occ_weight=occ_weight,flow_origin_weight=flow_origin_weight,flow_weight=flow_weight,use_focal_loss=True)
     optimizer = torch.optim.NAdam(model.parameters(), lr=LR) 
-    # scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=int(30438*1.5), T_mult=1)
-    # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 500000 * 10, eta_min=0, last_epoch=- 1, verbose=False)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 3, 0.5) 
     return model, loss_fn, optimizer, scheduler
 
@@ -194,7 +192,7 @@ def model_training(gpu_id, world_size):
         with open('wandb_api_key.txt') as f:
             os.environ["WANDB_API_KEY"] = f.read()
         os.environ["WANDB_MODE"] = 'online' # offline, online, disabled, dryrun, sync
-        wandb.init(project="ofpnet", entity="youshaamurhij", name=args.title)
+        wandb.init(project="ofmpnet", entity="youshaamurhij", name=args.title)
         wandb.config.update(args)
         
     if CHECKPOINT_PATH is not None:

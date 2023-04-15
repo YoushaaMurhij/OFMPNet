@@ -126,9 +126,9 @@ def compute_occupancy_flow_metrics(
         flow_grounded_pred_all_occupancy = (
             pred_all_occupancy * flow_warped_origin_occupancy)
         # Now compute occupancy metrics between this quantity and ground-truth.
+        # reverse the order of true and pred
         metrics_dict['vehicles_flow_warped_occupancy_auc'].append(
-            _compute_occupancy_auc(flow_grounded_pred_all_occupancy,
-                                  true_all_occupancy))
+            _compute_occupancy_auc(true_all_occupancy, flow_grounded_pred_all_occupancy))
         metrics_dict['vehicles_flow_warped_occupancy_iou'].append(
             _compute_occupancy_soft_iou(flow_grounded_pred_all_occupancy,
                                         true_all_occupancy))
@@ -463,4 +463,3 @@ def _flow_warp(
     warped_flow_origins.append(warped_origin)
 
   return warped_flow_origins
-
