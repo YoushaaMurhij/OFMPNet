@@ -2,7 +2,9 @@
 Another Multi-modal Hierarchical Transformer for Occupancy Flow Field and Motion Prediction
  
 ![workflow](https://github.com/YoushaaMurhij/OFMPNet/actions/workflows/main.yml/badge.svg) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT) ![Visitor count](https://shields-io-visitor-counter.herokuapp.com/badge?page=YoushaaMurhij/OFMPNet)
-## Demo:
+
+## Architecture:
+![pipeline](./assets/OFMPNet-pipe.png)
 
 ## Abstract:
 Motion prediction task is essential for autonomous driving systems and provides necessary information required to plan vehicles behaviour in the environment. 
@@ -76,6 +78,11 @@ python3 tools/train.py --title experinment_title
 ```bash
 python3 tools/inference.py --weight_path /path/to/weights
 ```
+
+## Demo:
+![M-Cross](./assets/sds_10.png)
+![T-Cross](./assets/sds_0.png)
+![Cross](./assets/sds_1.png)
 ## License:
 OFMPNet is released under MIT license (see [LICENSE](./LICENSE)). It is developed based on a forked version of [STrajNet](https://github.com/georgeliu233/STrajNet). We also used code from [OFPNet](https://github.com/YoushaaMurhij/OFPNet), [Swin-Transformer](https://github.com/microsoft/Swin-Transformer) and [FMFNet](https://github.com/YoushaaMurhij/FMFNet).
 
