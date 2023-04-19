@@ -1,5 +1,5 @@
 # OFMPNet
-Another Multi-modal Hierarchical Transformer for Occupancy Flow Field and Motion Prediction
+Another Multi-modal End-to-end pipeline for Occupancy Flow Field and Motion Prediction
  
 ![workflow](https://github.com/YoushaaMurhij/OFMPNet/actions/workflows/main.yml/badge.svg) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT) ![Visitor count](https://shields-io-visitor-counter.herokuapp.com/badge?page=YoushaaMurhij/OFMPNet)
 
@@ -16,6 +16,7 @@ We also proposed a novel time weighted motion flow loss, the application of whic
 On Waymo Occupancy and Flow Prediction benchmark, our approach achieved state-of-the-art results with 52.1\% Soft IoU and 76.75\% AUC on Flow-Grounded Occupancy.
 
 ## Main results:
+To be updated..
 
 ## Use:
 ```bash
