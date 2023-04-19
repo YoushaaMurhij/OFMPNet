@@ -5,6 +5,13 @@ Another Multi-modal Hierarchical Transformer for Occupancy Flow Field and Motion
 ## Demo:
 
 ## Abstract:
+Motion prediction task is essential for autonomous driving systems and provides necessary information required to plan vehicles behaviour in the environment. 
+Current motion prediction methods focus on predicting the future trajectory for each agent in the scene separately using its previous trajectory information.
+In this work, we propose a end-to-end neural network method to predict all future behaviours for dynamic objects in the environment benefiting from the occupancy map and the motion flow of the scene. 
+We are exploring various options for building a deep encoder-decoder model called OFMPNet, which takes as input a sequence of bird's-eye-view images with a road map, occupancy grid and previous motion flow. 
+The model encoder can contain transformer, attention-based or convolutional units. The decoder considers the usage of both convolutional modules and recurrent blocks.
+We also proposed a novel time weighted motion flow loss, the application of which demonstrated a significant reduction in end-point error.
+On Waymo Occupancy and Flow Prediction benchmark, our approach achieved state-of-the-art results with 52.1\% Soft IoU and 76.75\% AUC on Flow-Grounded Occupancy.
 
 ## Main results:
 
