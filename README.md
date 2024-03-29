@@ -1,4 +1,4 @@
-# OFMPNet: Deep End-to-End Model for Occupancy and Flow Prediction in Urban Environment
+# OFMPNet: Deep End-to-End Model for Occupancy and Flow Prediction in Urban Environment [Neurocomputing 2024]
  ![workflow](https://github.com/YoushaaMurhij/OFMPNet/actions/workflows/main.yml/badge.svg) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT) 
 
 Another Multi-modal End-to-end pipeline for Occupancy Flow Field and Motion Prediction
