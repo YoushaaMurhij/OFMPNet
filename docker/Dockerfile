@@ -15,7 +15,7 @@ RUN python3 -m pip install numpy matplotlib tqdm
 RUN pip3 install waymo-open-dataset-tf-2-6-0 
 RUN pip3 install tensorflow-addons
 RUN pip3 install wandb
-RUN pip3 install torch torchvision --extra-index-url https://download.pytorch.org/whl/cu113
+RUN pip install torch==1.12.1+cu113 torchvision==0.13.1+cu113 --extra-index-url https://download.pytorch.org/whl/cu113
 RUN pip3 install scikit-learn torchmetrics torchinfo
 
 ARG USER=user
