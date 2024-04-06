@@ -1,9 +1,10 @@
 # OFMPNet: Deep End-to-End Model for Occupancy and Flow Prediction in Urban Environment [Neurocomputing 2024]
- ![workflow](https://github.com/YoushaaMurhij/OFMPNet/actions/workflows/main.yml/badge.svg) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT) 
+ ![workflow](https://github.com/YoushaaMurhij/OFMPNet/actions/workflows/main.yml/badge.svg) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT) [![DOI](https://zenodo.org/badge/doi/10.1016/neucom.2024.127649.svg)](https://doi.org/10.1016/j.neucom.2024.127649)
 
 Another Multi-modal End-to-end pipeline for Occupancy Flow Field and Motion Prediction
 
-Paper link will be added soon!
+
+[Neurocomputing paper link](https://www.sciencedirect.com/science/article/pii/S092523122400420X?via%3Dihub) on Science Direct!
 ## Model Architecture:
 ![pipeline](./assets/OFMPNet-pipe.png)
 
@@ -103,6 +104,22 @@ python3 tools/inference.py --weight_path /path/to/weights
 ## License:
 OFMPNet is released under MIT license (see [LICENSE](./LICENSE)). It is developed based on a forked version of [STrajNet](https://github.com/georgeliu233/STrajNet). We also used code from [OFPNet](https://github.com/YoushaaMurhij/OFPNet), [Swin-Transformer](https://github.com/microsoft/Swin-Transformer) and [FMFNet](https://github.com/YoushaaMurhij/FMFNet).
 
+
+## Citation:
+If you find this work helpful, please consider citing:
+```
+    @article{MURHIJ2024127649,
+    title = {OFMPNet: Deep end-to-end model for occupancy and flow prediction in urban environment},
+    journal = {Neurocomputing},
+    pages = {127649},
+    year = {2024},
+    issn = {0925-2312},
+    doi = {https://doi.org/10.1016/j.neucom.2024.127649},
+    url = {https://www.sciencedirect.com/science/article/pii/S092523122400420X},
+    author = {Youshaa Murhij and Dmitry Yudin},
+    keywords = {Motion prediction, Occupancy, Flow prediction, Self-driving, Deep neural network, Transformer}
+}
+```
 ## Contact:
 Questions and suggestions are welcome! </br>
 Youshaa Murhij: yosha.morheg at phystech.edu
